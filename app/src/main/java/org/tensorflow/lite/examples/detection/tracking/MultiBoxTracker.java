@@ -66,7 +66,23 @@ public class MultiBoxTracker {
   private Matrix frameToCanvasMatrix;
   private int frameWidth;
   private int frameHeight;
+  private int canvasWidth;
+  private int canvasHeight;
   private int sensorOrientation;
+
+  private int topX = 0;
+  private int topY = 0;
+  private int width = 0;
+  private int height = 0;
+
+  public int getCanvasWidth(){
+    return canvasWidth;
+  }
+
+  public int getCanvasHeight(){
+    return canvasHeight;
+  }
+
 
   public MultiBoxTracker(final Context context) {
     for (final int color : COLORS) {
@@ -120,6 +136,22 @@ public class MultiBoxTracker {
     return frameToCanvasMatrix;
   }
 
+  public void setTopX(int x){
+    topX = x;
+  }
+
+  public void setTopY(int y){
+    topY = y;
+  }
+
+  public void setWidth(int w){
+    width = w;
+  }
+
+  public void setHeight(int h){
+    height = h;
+  }
+
   public synchronized void draw(final Canvas canvas) {
     final boolean rotated = sensorOrientation % 180 == 90;
     final float multiplier =
@@ -134,6 +166,21 @@ public class MultiBoxTracker {
             (int) (multiplier * (rotated ? frameWidth : frameHeight)),
             sensorOrientation,
             false);
+
+    canvasWidth = canvas.getWidth();
+    canvasHeight = canvas.getHeight();
+
+    Paint regionSelect = new Paint();
+    regionSelect.setColor(Color.YELLOW);
+    regionSelect.setStyle(Style.STROKE);
+    regionSelect.setStrokeWidth(10.0f);
+    regionSelect.setStrokeCap(Cap.ROUND);
+    regionSelect.setStrokeJoin(Join.ROUND);
+    regionSelect.setStrokeMiter(100);
+    RectF focusRegion = new RectF(topX,topY,topX+ width,topY+height);
+    canvas.drawRoundRect(focusRegion, 1, 1, regionSelect);
+
+
     for (final TrackedRecognition recognition : trackedObjects) {
       final RectF trackedPos = new RectF(recognition.location);
 

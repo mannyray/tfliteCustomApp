@@ -149,6 +149,24 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   @Override
   protected void processImage() {
+
+    runOnUiThread(
+            new Runnable() {
+              @Override
+              public void run() {
+                positionTopXSeekBar.setMax(tracker.getCanvasWidth());
+                positionTopYSeekBar.setMax(tracker.getCanvasHeight());
+                boxWidth.setMax(tracker.getCanvasWidth());
+                boxHeight.setMax(tracker.getCanvasHeight());
+              }
+            });
+    canvasWidth = tracker.getCanvasWidth();
+    canvasHeight = tracker.getCanvasHeight();
+    tracker.setTopX(topX);
+    tracker.setTopY(topY);
+    tracker.setWidth(width);
+    tracker.setHeight(height);
+
     ++timestamp;
     final long currTimestamp = timestamp;
     trackingOverlay.postInvalidate();

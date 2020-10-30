@@ -46,6 +46,7 @@ import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -86,6 +87,22 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  SeekBar positionTopXSeekBar;
+  TextView topXText;
+  int topX = 0;
+  SeekBar positionTopYSeekBar;
+  TextView topYText;
+  int topY = 0;
+  SeekBar boxWidth;
+  TextView boxWidthText;
+  int width = 0;
+  SeekBar boxHeight;
+  TextView boxHeightText;
+  int height = 0;
+
+  protected int canvasHeight;
+  protected int canvasWidth;
+
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
@@ -111,6 +128,75 @@ public abstract class CameraActivity extends AppCompatActivity
     gestureLayout = findViewById(R.id.gesture_layout);
     sheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
     bottomSheetArrowImageView = findViewById(R.id.bottom_sheet_arrow);
+    topXText = findViewById(R.id.positionX);
+    topXText.setText("0");
+    topYText = findViewById(R.id.positionY);
+    topYText.setText("0");
+    boxWidthText = findViewById(R.id.width);
+    boxWidthText.setText(""+width);
+    boxHeightText = findViewById(R.id.height);
+    boxHeightText.setText(""+height);
+
+
+    positionTopXSeekBar = findViewById(R.id.seekBarTopX);
+    positionTopXSeekBar.setOnSeekBarChangeListener( new SeekBar.OnSeekBarChangeListener(){
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        topXText.setText(""+progress);
+        topX = progress;
+      }
+    });
+
+    positionTopYSeekBar = findViewById(R.id.seekBarTopY);
+    positionTopYSeekBar.setOnSeekBarChangeListener( new SeekBar.OnSeekBarChangeListener(){
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        topYText.setText(""+progress);
+        topY = progress;
+      }
+    });
+
+    boxWidth = findViewById(R.id.seekBarWidth);
+    boxWidth.setOnSeekBarChangeListener( new SeekBar.OnSeekBarChangeListener(){
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        boxWidthText.setText(""+progress);
+        width = progress;
+      }
+    });
+
+    boxHeight = findViewById(R.id.seekBarHeight);
+    boxHeight.setOnSeekBarChangeListener( new SeekBar.OnSeekBarChangeListener(){
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        boxHeightText.setText(""+progress);
+        height = progress;
+      }
+    });
 
     ViewTreeObserver vto = gestureLayout.getViewTreeObserver();
     vto.addOnGlobalLayoutListener(
@@ -238,6 +324,7 @@ public abstract class CameraActivity extends AppCompatActivity
       rgbBytes = new int[previewWidth * previewHeight];
     }
     try {
+
       final Image image = reader.acquireLatestImage();
 
       if (image == null) {
@@ -417,10 +504,10 @@ public abstract class CameraActivity extends AppCompatActivity
         // Fallback to camera1 API for internal cameras that don't have full support.
         // This should help with legacy situations where using the camera2 API causes
         // distorted or otherwise broken previews.
-        useCamera2API =
-            (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                || isHardwareLevelSupported(
-                    characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+        useCamera2API = false;
+        //    (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+        //        || isHardwareLevelSupported(
+        //            characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
         LOGGER.i("Camera API lv2?: %s", useCamera2API);
         return cameraId;
       }
