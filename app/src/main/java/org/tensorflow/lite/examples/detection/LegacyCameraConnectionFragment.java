@@ -23,6 +23,7 @@ import android.hardware.Camera.CameraInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
@@ -30,6 +31,8 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
+
 import java.io.IOException;
 import java.util.List;
 import org.tensorflow.lite.examples.detection.customview.AutoFitTextureView;
@@ -37,6 +40,7 @@ import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 
 public class LegacyCameraConnectionFragment extends Fragment {
+
   private static final Logger LOGGER = new Logger();
   /** Conversion from screen rotation to JPEG orientation. */
   private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -135,6 +139,27 @@ public class LegacyCameraConnectionFragment extends Fragment {
   private void startBackgroundThread() {
     backgroundThread = new HandlerThread("CameraBackground");
     backgroundThread.start();
+
+    Thread myThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        double lastZoomPercentage = ((CameraActivity) getActivity()).getZoomValue();
+        while(true)
+        {
+          double currentZoom = ((CameraActivity) getActivity()).getZoomValue();
+          if( currentZoom != lastZoomPercentage )
+          {
+            lastZoomPercentage = currentZoom;
+            Camera.Parameters parameters = camera.getParameters();
+            List<String> focusModes = parameters.getSupportedFocusModes();
+            parameters.setZoom( (int) (lastZoomPercentage * ( (double) parameters.getMaxZoom() ) ) );
+            camera.setParameters(parameters);
+            camera.startPreview();
+          }
+        }
+      }
+    });
+    myThread.start();
   }
 
   /** Stops the background thread and its {@link Handler}. */
@@ -158,6 +183,7 @@ public class LegacyCameraConnectionFragment extends Fragment {
       if (focusModes != null
               && focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+
       }
       List<Camera.Size> cameraSizes = parameters.getSupportedPreviewSizes();
       Size[] sizes = new Size[cameraSizes.size()];

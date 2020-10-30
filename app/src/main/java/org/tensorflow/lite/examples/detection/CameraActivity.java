@@ -46,6 +46,7 @@ import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
@@ -86,6 +87,14 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  SeekBar zoomSeekBar;
+  TextView zoomSeekBarText;
+  private double zoomPercentage = 0;
+
+  public double getZoomValue(){
+    return zoomPercentage;
+  }
+
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
@@ -111,6 +120,27 @@ public abstract class CameraActivity extends AppCompatActivity
     gestureLayout = findViewById(R.id.gesture_layout);
     sheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
     bottomSheetArrowImageView = findViewById(R.id.bottom_sheet_arrow);
+    zoomSeekBar = findViewById(R.id.zoomSeekBar);
+    zoomSeekBarText = findViewById(R.id.zoomSeekBarText);
+
+    zoomSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+      @Override
+      public void onStopTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+      public void onStartTrackingTouch(SeekBar seekBar) {
+      }
+      @Override
+     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+        zoomPercentage =  ( (double) progress ) / ( (double) seekBar.getMax());
+        String percentage = "" + (zoomPercentage*100);
+        if(percentage.length() > 4)
+        {
+          percentage = percentage.substring(0,4);
+        }
+        zoomSeekBarText.setText(percentage+"%");
+       }
+     });
 
     ViewTreeObserver vto = gestureLayout.getViewTreeObserver();
     vto.addOnGlobalLayoutListener(
@@ -417,10 +447,10 @@ public abstract class CameraActivity extends AppCompatActivity
         // Fallback to camera1 API for internal cameras that don't have full support.
         // This should help with legacy situations where using the camera2 API causes
         // distorted or otherwise broken previews.
-        useCamera2API =
-            (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                || isHardwareLevelSupported(
-                    characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+        useCamera2API = false;
+        //    (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+        //        || isHardwareLevelSupported(
+        //            characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
         LOGGER.i("Camera API lv2?: %s", useCamera2API);
         return cameraId;
       }
