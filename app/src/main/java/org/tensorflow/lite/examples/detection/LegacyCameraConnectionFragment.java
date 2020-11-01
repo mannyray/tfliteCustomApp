@@ -17,12 +17,20 @@ package org.tensorflow.lite.examples.detection;
  */
 
 import android.app.Fragment;
+import android.content.ContentValues;
+import android.content.Intent;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.SystemClock;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
@@ -30,7 +38,13 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import org.tensorflow.lite.examples.detection.customview.AutoFitTextureView;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
@@ -85,6 +99,10 @@ public class LegacyCameraConnectionFragment extends Fragment {
   /** An additional thread for running tasks that shouldn't block the UI. */
   private HandlerThread backgroundThread;
 
+  public static final int MEDIA_TYPE_IMAGE = 1;
+  public static final int MEDIA_TYPE_VIDEO = 2;
+
+
   public LegacyCameraConnectionFragment(
       final Camera.PreviewCallback imageListener, final int layout, final Size desiredSize) {
     this.imageListener = imageListener;
@@ -135,6 +153,104 @@ public class LegacyCameraConnectionFragment extends Fragment {
   private void startBackgroundThread() {
     backgroundThread = new HandlerThread("CameraBackground");
     backgroundThread.start();
+
+    Thread myThread = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        boolean pictureJustTaken = false;
+        long timeTaken = 0;
+        while(true)
+        {
+          final boolean[] safeToTakePicture = {true};
+
+          if (( (CameraActivity) getActivity()).getTakePicture() && safeToTakePicture[0] == true){
+            ( (CameraActivity) getActivity()).setTakePicture(false);
+            ((CameraActivity) getActivity()).pauseTakingPicture(true);
+            Log.e("CAMERA", "Taking picture");
+
+            Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+              @Override
+              public void onPictureTaken(byte[] data, Camera camera) {
+                Log.e("ERROR:", "Starting to save");
+                safeToTakePicture[0] = false;
+
+                File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+                if (pictureFile == null){
+                  Log.d("ERROR", "Error creating media file, check storage permissions");
+                  return;
+                }
+
+                try {
+                  FileOutputStream fos = new FileOutputStream(pictureFile);
+                  fos.write(data);
+                  fos.close();
+                } catch (FileNotFoundException e) {
+                  Log.d("ERROR", "File not found: " + e.getMessage());
+                } catch (IOException e) {
+                  Log.d("ERROR", "Error accessing file: " + e.getMessage());
+                }
+                Log.d("ERROR", "Picture taken");
+
+                addImageGallery(pictureFile);
+
+                safeToTakePicture[0] = true;
+              }
+            };
+              pictureJustTaken = true;
+              timeTaken = SystemClock.uptimeMillis();
+              camera.takePicture(null, null, mPicture);
+          }
+          else if ( pictureJustTaken &&  SystemClock.uptimeMillis() - timeTaken > 1500 ) {
+            Log.d("CAMERA", "Resume");
+            ((CameraActivity) getActivity()).pauseTakingPicture(false);
+
+            safeToTakePicture[0] = true;
+            pictureJustTaken = false;
+            camera.startPreview();
+          }
+        }
+      }
+    });
+    myThread.start();
+  }
+
+  private void addImageGallery( File file ) {
+    ContentValues values = new ContentValues();
+    values.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
+    values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg"); // or image/png
+    getActivity().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+  }
+
+  private static File getOutputMediaFile(int type){
+    // To be safe, you should check that the SDCard is mounted
+    // using Environment.getExternalStorageState() before doing this.
+
+    File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES), "TensorFlowApp");
+    // This location works best if you want the created images to be shared
+    // between applications and persist after your app has been uninstalled.
+
+    // Create the storage directory if it does not exist
+    if (! mediaStorageDir.exists()){
+      if (! mediaStorageDir.mkdirs()){
+        Log.d("MyCameraApp", "failed to create directory");
+        return null;
+      }
+    }
+
+    // Create a media file name
+    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+    File mediaFile;
+    if (type == MEDIA_TYPE_IMAGE){
+      mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+              "IMG_"+ timeStamp + ".jpg");
+    } else if(type == MEDIA_TYPE_VIDEO) {
+      mediaFile = new File(mediaStorageDir.getPath() + File.separator +
+              "VID_"+ timeStamp + ".mp4");
+    } else {
+      return null;
+    }
+    return mediaFile;
   }
 
   /** Stops the background thread and its {@link Handler}. */
@@ -183,6 +299,7 @@ public class LegacyCameraConnectionFragment extends Fragment {
     textureView.setAspectRatio(s.height, s.width);
 
     camera.startPreview();
+
   }
 
   protected void stopCamera() {
