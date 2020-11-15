@@ -16,6 +16,8 @@
 
 package org.tensorflow.lite.examples.detection;
 
+import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -29,6 +31,9 @@ import android.media.ImageReader.OnImageAvailableListener;
 import android.os.SystemClock;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.Display;
+import android.view.Surface;
+import android.view.WindowManager;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -147,6 +152,19 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
   }
 
+  public static Bitmap RotateBitmap(Bitmap source, float angle)
+  {
+    Matrix matrix = new Matrix();
+    matrix.postRotate(angle);
+    return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+  }
+
+  protected boolean isRotated()
+  {
+      tracker.setRotated(true);
+      return true;
+  }
+
   @Override
   protected void processImage() {
     ++timestamp;
@@ -178,7 +196,31 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           public void run() {
             LOGGER.i("Running detection on image " + currTimestamp);
             final long startTime = SystemClock.uptimeMillis();
-            final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
+            final List<Detector.Recognition> results ;//= detector.recognizeImage(RotateBitmap(croppedBitmap,90));
+            if ( !isRotated() )
+            {
+              results = detector.recognizeImage(croppedBitmap);
+            }
+            else{
+              results = detector.recognizeImage(RotateBitmap(croppedBitmap,90));
+              for(int i = 0; i < results.size(); i++ ) {
+                Detector.Recognition tmp = results.get(i);
+                RectF tmpR = tmp.getLocation();
+                RectF tmpR2 = tmp.getLocation();
+                tmpR.right = tmpR2.top;
+                tmpR.bottom = tmpR2.right;
+                tmpR.left = tmpR2.bottom;
+                tmpR.top = tmpR2.left;
+
+                tmpR.bottom = croppedBitmap.getHeight() - tmpR.bottom;
+                tmpR.top = croppedBitmap.getHeight() - tmpR.top;
+
+                tmp.setLocation(tmpR);
+                results.set( i, tmp );
+              }
+            }
+
+
             lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
 
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);

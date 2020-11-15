@@ -68,6 +68,12 @@ public class MultiBoxTracker {
   private int frameHeight;
   private int sensorOrientation;
 
+  private boolean isRotated = false;
+  public void setRotated( boolean isR )
+  {
+    isRotated = isR;
+  }
+
   public MultiBoxTracker(final Context context) {
     for (final int color : COLORS) {
       availableColors.add(color);
@@ -149,8 +155,16 @@ public class MultiBoxTracker {
               : String.format("%.2f", (100 * recognition.detectionConfidence));
       //            borderedText.drawText(canvas, trackedPos.left + cornerSize, trackedPos.top,
       // labelString);
-      borderedText.drawText(
-          canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "%", boxPaint);
+
+      if( !isRotated ) {
+        borderedText.drawText(
+                canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "%", boxPaint);
+      }else{
+        canvas.rotate(270, trackedPos.left, trackedPos.bottom);
+        borderedText.drawText(
+                canvas, trackedPos.left + cornerSize, trackedPos.bottom, labelString + "%", boxPaint);
+        canvas.rotate(-270,trackedPos.left, trackedPos.bottom);
+      }
     }
   }
 
