@@ -56,7 +56,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final String TF_OD_API_LABELS_FILE = "labelmap.txt";
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
-  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
+  private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.4f;
   private static final boolean MAINTAIN_ASPECT = false;
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
@@ -82,6 +82,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
+  private Sort s;
+
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
     final float textSizePx =
@@ -95,6 +97,16 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     int cropSize = TF_OD_API_INPUT_SIZE;
 
     try {
+      org.tensorflow.lite.examples.detection.Matrix sensorNoise = org.tensorflow.lite.examples.detection.Matrix.identity(2,2);
+      org.tensorflow.lite.examples.detection.Matrix processNoise = org.tensorflow.lite.examples.detection.Matrix.identity(4,4);
+      Function f = (Function) null;
+      double minimumIOU = 0.001;
+      double newShapeWeight = 0.1;
+      double threshold = 1;
+      org.tensorflow.lite.examples.detection.Matrix initialVelocity = org.tensorflow.lite.examples.detection.Matrix.zero(2,1);
+      org.tensorflow.lite.examples.detection.Matrix initialCovariance = org.tensorflow.lite.examples.detection.Matrix.identity(4,4);
+
+      s = new Sort(sensorNoise,processNoise,f,minimumIOU,newShapeWeight,threshold,initialVelocity,initialCovariance);
       detector =
           TFLiteObjectDetectionAPIModel.create(
               this,
@@ -198,7 +210,32 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             final List<Detector.Recognition> mappedRecognitions =
                 new ArrayList<Detector.Recognition>();
 
-            for (final Detector.Recognition result : results) {
+            int validSize = 0;
+            for (int i = 0; i < results.size(); i++) {
+              Detector.Recognition tmp = results.get(i);
+              if (tmp.getConfidence() > MINIMUM_CONFIDENCE_TF_OD_API) {
+                validSize++;
+              }
+            }
+
+            Measurement measurements[] = new Measurement[validSize];
+            int counter = 0;
+            for (int i = 0; i < results.size(); i++) {
+              Detector.Recognition tmp = results.get(i);
+              if(tmp.getConfidence() > MINIMUM_CONFIDENCE_TF_OD_API) {
+                RectF tmpR = tmp.getLocation();
+                LOGGER.i("AMOUNT OF TRACKED OBJECTS " +results.get(i).getTitle());
+                measurements[counter] = new Measurement(tmpR.left, tmpR.top, tmpR.width(), tmpR.height(), results.get(i).getTitle(), results.get(i).getConfidence());
+                counter++;
+              }
+            }
+
+            double localTime = SystemClock.uptimeMillis()/1000.0;
+            s.predictPhase(localTime);
+            s.updatePhase(measurements,localTime);
+            LOGGER.i("AMOUNT OF TRACKED OBJECTS " +s.getTracked().length);
+
+            /*for (final Detector.Recognition result : results) {
               final RectF location = result.getLocation();
               if (location != null && result.getConfidence() >= minimumConfidence) {
                 canvas.drawRect(location, paint);
@@ -208,6 +245,26 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 result.setLocation(location);
                 mappedRecognitions.add(result);
               }
+            }*/
+
+            TrackedObject[] to = s.getTracked();
+
+            for(int i=0; i<to.length; i++){
+              if(to[i].last_update != localTime) {
+                continue;
+              }
+              RectF location = new RectF(
+                      (int)(to[i].position.get(0,0)),
+                      (int)(to[i].position.get(1,0)),
+                      (int)(to[i].position.get(0,0) +to[i].width),
+                      (int)(to[i].position.get(1,0) +to[i].height));
+              canvas.drawRect(location, paint);
+              cropToFrameTransform.mapRect(location);
+              //LOGGER.i("AMOUNT OF TRACKED OBJECTS "+ (int)(to[i].position.get(0,0))+" "+(int)(to[i].position.get(1,0))+
+              //      " "+(int)(to[i].position.get(0,0) +to[i].width)+" "+(int)(to[i].position.get(1,0) +to[i].height)+ " "+to[i].objectType);
+              //        final String id, final String title, final Float confidence, final RectF location)
+              Detector.Recognition result = new Detector.Recognition(to[i].name,to[i].name, MINIMUM_CONFIDENCE_TF_OD_API,  location);
+              mappedRecognitions.add(result);
             }
 
             tracker.trackResults(mappedRecognitions, currTimestamp);
