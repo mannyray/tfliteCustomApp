@@ -29,6 +29,8 @@ import android.media.ImageReader.OnImageAvailableListener;
 import android.os.SystemClock;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -133,6 +135,48 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     frameToCropTransform.invert(cropToFrameTransform);
 
     trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
+
+
+    trackingOverlay.setOnTouchListener( new View.OnTouchListener(){
+      @Override
+      public boolean onTouch(View v, MotionEvent event) {
+        int eventAction = event.getAction();
+
+        // you may need the x/y location
+        int x = v.getLeft() +(int)event.getX();
+        int y = v.getTop() + (int)event.getY();
+
+        int buttonX = tracker.getButtonX();
+        int buttonY = tracker.getButtonY();
+        int buttonX2 = tracker.getButtonX2();
+        int buttonY2 = tracker.getButtonY2();
+
+        // put your code in here to handle the event
+        switch (eventAction) {
+          case MotionEvent.ACTION_DOWN:
+            if(Math.abs(x-buttonX) < 100 && Math.abs(y-buttonY)< 100) {
+              tracker.buttonPress(x, y);
+            }
+            else if(Math.abs(x-buttonX2) < 100 && Math.abs(y-buttonY2)< 100){
+              tracker.buttonPress2(x, y);
+            }
+            break;
+          case MotionEvent.ACTION_UP:
+            break;
+          case MotionEvent.ACTION_MOVE:
+            if(Math.abs(x-buttonX) < 100 && Math.abs(y-buttonY)< 100) {
+              tracker.buttonPress(x, y);
+            }
+            else if(Math.abs(x-buttonX2) < 100 && Math.abs(y-buttonY2)< 100){
+              tracker.buttonPress2(x, y);
+            }
+            break;
+      }
+      // tell the View that we handled the event
+      return true;
+      }
+    });
+
     trackingOverlay.addCallback(
         new DrawCallback() {
           @Override

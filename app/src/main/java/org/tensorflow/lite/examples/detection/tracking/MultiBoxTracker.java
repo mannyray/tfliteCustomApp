@@ -68,6 +68,35 @@ public class MultiBoxTracker {
   private int frameHeight;
   private int sensorOrientation;
 
+
+  private boolean buttonPressed = true;
+  private int buttonX = 100;
+  private int buttonY = 500;
+  private int buttonX2 = 400;
+  private int buttonY2 = 1000;
+  public void buttonPress(int x, int y) {
+    buttonY = y;
+  }
+  public void buttonPress2(int x, int y) {
+    buttonY2 = y;
+  }
+
+  public int getButtonX(){
+    return buttonX;
+  }
+
+  public int getButtonY(){
+    return buttonY;
+  }
+
+  public int getButtonX2(){
+    return buttonX2;
+  }
+
+  public int getButtonY2(){
+    return buttonY2;
+  }
+
   public MultiBoxTracker(final Context context) {
     for (final int color : COLORS) {
       availableColors.add(color);
@@ -151,6 +180,18 @@ public class MultiBoxTracker {
       // labelString);
       borderedText.drawText(
           canvas, trackedPos.left + cornerSize, trackedPos.top, labelString + "%", boxPaint);
+    }
+
+    if(buttonPressed){
+      Paint paint = new Paint();
+      paint.setColor(Color.YELLOW);
+      paint.setStyle(Paint.Style.FILL);
+      paint.setStrokeWidth(10);
+      canvas.drawCircle(buttonX,buttonY,100,paint);
+      canvas.drawLine(0,buttonY,2000,buttonY,paint);
+      paint.setColor(Color.RED);
+      canvas.drawCircle(buttonX2,buttonY2,100,paint);
+      canvas.drawLine(0,buttonY2,2000,buttonY2,paint);
     }
   }
 
