@@ -17,6 +17,7 @@
 package org.tensorflow.lite.examples.detection;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -33,6 +34,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.PowerManager;
 import android.os.Trace;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,6 +45,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -86,6 +89,23 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  private Button sleepButton;
+  protected boolean boolSleepMode = false;
+
+  public void DimBrightness(){
+    WindowManager.LayoutParams params = getWindow().getAttributes();
+    params.flags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+    params.screenBrightness = 0.01f;
+    getWindow().setAttributes(params);
+  }
+
+  public void MaxBrightness(){
+    WindowManager.LayoutParams params = getWindow().getAttributes();
+    params.flags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+    params.screenBrightness = 0.5f;
+    getWindow().setAttributes(params);
+  }
+
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
@@ -111,6 +131,14 @@ public abstract class CameraActivity extends AppCompatActivity
     gestureLayout = findViewById(R.id.gesture_layout);
     sheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
     bottomSheetArrowImageView = findViewById(R.id.bottom_sheet_arrow);
+
+    sleepButton = findViewById(R.id.sleepButton);
+    sleepButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        boolSleepMode = !boolSleepMode;
+      }
+    });
 
     ViewTreeObserver vto = gestureLayout.getViewTreeObserver();
     vto.addOnGlobalLayoutListener(
@@ -226,6 +254,9 @@ public abstract class CameraActivity extends AppCompatActivity
         };
     processImage();
   }
+
+  boolean actionEvent = false;
+  boolean previousActionEvent = false;
 
   /** Callback for Camera2 API */
   @Override

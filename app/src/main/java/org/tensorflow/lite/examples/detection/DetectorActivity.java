@@ -82,6 +82,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
+  private long firstTime = 0;
+  private boolean noticed = false;
+
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
     final float textSizePx =
@@ -198,6 +201,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             final List<Detector.Recognition> mappedRecognitions =
                 new ArrayList<Detector.Recognition>();
 
+            Boolean objectDetected = false;
             for (final Detector.Recognition result : results) {
               final RectF location = result.getLocation();
               if (location != null && result.getConfidence() >= minimumConfidence) {
@@ -207,6 +211,42 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                 result.setLocation(location);
                 mappedRecognitions.add(result);
+
+                if (  (result.getTitle()).compareTo("person") == 0  ){
+                  objectDetected = true;
+                }
+              }
+            }
+            if(boolSleepMode){
+              if(objectDetected){
+                actionEvent = true;
+                if(firstTime == 0){
+                  firstTime = SystemClock.uptimeMillis();
+                }
+              }
+              else{
+                actionEvent = false;
+                firstTime = 0;
+              }
+
+              if( actionEvent ){
+                if( firstTime != 0 && startTime - firstTime  >= 1000 && noticed == false) {
+                  runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                      MaxBrightness();
+                    }
+                  });
+                  noticed = true;
+                }
+              }else{
+                noticed = false;
+                runOnUiThread(new Runnable() {
+                  @Override
+                  public void run() {
+                    DimBrightness();
+                  }
+                });
               }
             }
 
