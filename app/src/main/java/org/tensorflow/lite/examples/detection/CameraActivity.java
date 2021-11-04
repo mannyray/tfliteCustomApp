@@ -43,6 +43,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -86,6 +87,24 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  private Button captureButton;
+
+  protected Boolean pauseTakingPicture = false;
+
+  boolean takePicture = false;
+
+  public boolean getTakePicture(){
+    return takePicture;
+  }
+
+  public void setTakePicture( boolean status ){
+    takePicture = status;
+  }
+
+  public void pauseTakingPicture( boolean status){
+    pauseTakingPicture = status;
+  }
+
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
@@ -111,6 +130,18 @@ public abstract class CameraActivity extends AppCompatActivity
     gestureLayout = findViewById(R.id.gesture_layout);
     sheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
     bottomSheetArrowImageView = findViewById(R.id.bottom_sheet_arrow);
+
+    captureButton = (Button) findViewById(R.id.TakePicture);
+    captureButton.setOnClickListener(
+            new View.OnClickListener() {
+              @Override
+              public void onClick(View v) {
+                takePicture = true;
+                // get an image from the camera
+                //mCamera.takePicture(null, null, picture);
+              }
+            }
+    );
 
     ViewTreeObserver vto = gestureLayout.getViewTreeObserver();
     vto.addOnGlobalLayoutListener(
@@ -185,6 +216,7 @@ public abstract class CameraActivity extends AppCompatActivity
   /** Callback for android.hardware.Camera API */
   @Override
   public void onPreviewFrame(final byte[] bytes, final Camera camera) {
+
     if (isProcessingFrame) {
       LOGGER.w("Dropping frame!");
       return;
@@ -417,10 +449,10 @@ public abstract class CameraActivity extends AppCompatActivity
         // Fallback to camera1 API for internal cameras that don't have full support.
         // This should help with legacy situations where using the camera2 API causes
         // distorted or otherwise broken previews.
-        useCamera2API =
-            (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                || isHardwareLevelSupported(
-                    characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+        useCamera2API = false;
+         //   (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+         //       || isHardwareLevelSupported(
+         //           characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
         LOGGER.i("Camera API lv2?: %s", useCamera2API);
         return cameraId;
       }
